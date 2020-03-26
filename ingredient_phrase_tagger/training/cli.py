@@ -3,57 +3,83 @@ import decimal
 import optparse
 import pandas as pd
 
-import utils
+from . import utils
 
 
 class Cli(object):
     def __init__(self, argv):
+        """
+        This generates the training and test data.
+        argv:
+        count (int) - number of samples
+        data-path (str) - path to training data
+        offset (int) - ?
+        """
         self.opts = self._parse_args(argv)
         self._upstream_cursor = None
 
     def run(self):
-        self.generate_data(self.opts.count, self.opts.offset)
+        return self.generate_data(self.opts.count, self.opts.offset)
 
     def generate_data(self, count, offset):
         """
         Generates training data in the CRF++ format for the ingredient
         tagging task
         """
-        df = pd.read_csv(self.opts.data_path)
+        df = pd.read_csv(self.opts.data_path, index_col="index")
         df = df.fillna("")
+        # Drop rows with no data
+        # df[df['input'].map(len) != 0].reset_index(drop=True).to_csv("nyt-ingredients-dropnan.csv")
 
         start = int(offset)
         end = int(offset) + int(count)
 
         df_slice = df.iloc[start: end]
 
+        cL = []
+
         for index, row in df_slice.iterrows():
             try:
+                cI = []
                 # extract the display name
                 display_input = utils.cleanUnicodeFractions(row["input"])
                 tokens = utils.tokenize(display_input)
+                # print([tok for tok in tokens])
                 del(row["input"])
 
+                # print(display_input)
+                # print([tok for tok in tokens.__iter__()])
                 rowData = self.addPrefixes([(t, self.matchUp(t, row)) for t in tokens])
+                # print(rowData)
 
+                fL = []
                 for i, (token, tags) in enumerate(rowData):
                     features = utils.getFeatures(token, i+1, tokens)
-                    print utils.joinLine([token] + features + [self.bestTag(tags)])
+                    fL.append([token, *features, self.bestTag(tags)])
+                    # print(features)
+                    # print(utils.joinLine([token] + features + [self.bestTag(tags)]))
+                    # From here on we have the full feature extraction process complete.
+                cI.extend((fL, display_input))
+                cL.append(cI)
+                # print()
 
             # ToDo: deal with this
             except UnicodeDecodeError:
                 pass
 
-            print
+            # print()
+
+        return cL
 
     def parseNumbers(self, s):
         """
         Parses a string that represents a number into a decimal data type so that
         we can match the quantity field in the db with the quantity that appears
         in the display name. Rounds the result to 2 places.
+        This is needed for processing the input data to match the tag and number, as tags are stored in int format (see matchUp)
         """
         ss = utils.unclump(s)
-
+        # TODO: For numbers as word (one), substitute the digit
         m3 = re.match('^\d+$', ss)
         if m3 is not None:
             return decimal.Decimal(round(float(ss), 2))
@@ -91,8 +117,9 @@ class Cli(object):
         token = utils.normalizeToken(token)
         decimalToken = self.parseNumbers(token)
 
+        from past.builtins import basestring
         for key, val in ingredientRow.iteritems():
-            if isinstance(val, basestring):
+            if isinstance(val, basestring): # str?
 
                 for n, vt in enumerate(utils.tokenize(val)):
                     if utils.normalizeToken(vt) == token:

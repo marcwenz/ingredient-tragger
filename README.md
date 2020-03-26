@@ -69,6 +69,7 @@ roughly 180k examples in our snapshot of the New York Times cooking database
 (which we include in this repo), so it is useful to run against a subset.
 
 The output of this step looks something like:
+L is actual lenth of elements in ingredient bucketed in [4, 8, 12, 16, 20]
 
     1            I1      L8      NoCAP  NoPAREN  B-QTY
     cup          I2      L8      NoCAP  NoPAREN  B-UNIT

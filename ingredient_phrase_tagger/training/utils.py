@@ -20,7 +20,7 @@ def tokenize(s):
         s = s.replace(unit + '/', unit + ' ')
         s = s.replace(unit + 's/', unit + 's ')
 
-    return filter(None, re.split(r'([,\(\)])?\s*', clumpFractions(s)))
+    return list(filter(None, re.split(r'([,\(\)])?\s+', clumpFractions(s))))
 
 def joinLine(columns):
     return "\t".join(columns)
@@ -34,7 +34,7 @@ def clumpFractions(s):
         clumpFractions("aaa 1 2/3 bbb")
         # => "aaa 1$2/3 bbb"
     """
-    return re.sub(r'(\d+)\s+(\d)/(\d)', r'\1$\2/\3', s)
+    return re.sub(r'(\d+)\s+(\d+)/(\d+)', r'\1$\2/\3', s)
 
 def cleanUnicodeFractions(s):
     """
