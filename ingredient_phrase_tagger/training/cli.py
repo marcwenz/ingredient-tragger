@@ -7,32 +7,37 @@ from . import utils
 
 
 class Cli(object):
-    def __init__(self, argv):
+    def __init__(self, count=-1, offset=0, data_path='nyt-ingredients-dropnan.csv'):
         """
         This generates the training and test data.
         argv:
-        count (int) - number of samples
-        data-path (str) - path to training data
-        offset (int) - ?
+        count (int) - number of samples, if -1 takes whole dataset
+        offset (int) - count from the top
+        data-path (str) - path to data
         """
-        self.opts = self._parse_args(argv)
+        self.count = count
+        self.offset = offset
+        self.data_path = data_path
         self._upstream_cursor = None
 
     def run(self):
-        return self.generate_data(self.opts.count, self.opts.offset)
+        return self.generate_data(self.count, self.offset)
 
     def generate_data(self, count, offset):
         """
         Generates training data in the CRF++ format for the ingredient
         tagging task
         """
-        df = pd.read_csv(self.opts.data_path, index_col="index")
+        df = pd.read_csv(self.data_path, index_col="index")
         df = df.fillna("")
         # Drop rows with no data
         # df[df['input'].map(len) != 0].reset_index(drop=True).to_csv("nyt-ingredients-dropnan.csv")
 
         start = int(offset)
-        end = int(offset) + int(count)
+        if count == -1:
+            end = -1
+        else:
+            end = int(offset) + int(count)
 
         df_slice = df.iloc[start: end]
 
@@ -49,13 +54,14 @@ class Cli(object):
 
                 # print(display_input)
                 # print([tok for tok in tokens.__iter__()])
-                rowData = self.addPrefixes([(t, self.matchUp(t, row)) for t in tokens])
+                rowData = self.addPrefixes(
+                    [(t, self.matchUp(t, row)) for t in tokens])
                 # print(rowData)
 
                 fL = []
                 for i, (token, tags) in enumerate(rowData):
                     features = utils.getFeatures(token, i+1, tokens)
-                    fL.append([token, *features, self.bestTag(tags)])
+                    fL.append([token, features, self.bestTag(tags)])
                     # print(features)
                     # print(utils.joinLine([token] + features + [self.bestTag(tags)]))
                     # From here on we have the full feature extraction process complete.
@@ -87,15 +93,14 @@ class Cli(object):
         m1 = re.match(r'(\d+)\s+(\d)/(\d)', ss)
         if m1 is not None:
             num = int(m1.group(1)) + (float(m1.group(2)) / float(m1.group(3)))
-            return decimal.Decimal(str(round(num,2)))
+            return decimal.Decimal(str(round(num, 2)))
 
         m2 = re.match(r'^(\d)/(\d)$', ss)
         if m2 is not None:
             num = float(m2.group(1)) / float(m2.group(2))
-            return decimal.Decimal(str(round(num,2)))
+            return decimal.Decimal(str(round(num, 2)))
 
         return None
-
 
     def matchUp(self, token, ingredientRow):
         """
@@ -117,9 +122,9 @@ class Cli(object):
         token = utils.normalizeToken(token)
         decimalToken = self.parseNumbers(token)
 
-        from past.builtins import basestring
+        # from past.builtins import basestring
         for key, val in ingredientRow.iteritems():
-            if isinstance(val, basestring): # str?
+            if isinstance(val, str):  # str?
 
                 for n, vt in enumerate(utils.tokenize(val)):
                     if utils.normalizeToken(vt) == token:
@@ -133,7 +138,6 @@ class Cli(object):
                     pass
 
         return ret
-
 
     def addPrefixes(self, data):
         """
@@ -159,7 +163,6 @@ class Cli(object):
 
         return newData
 
-
     def bestTag(self, tags):
 
         if len(tags) == 1:
@@ -183,7 +186,8 @@ class Cli(object):
 
         opts.add_option("--count", default="100", help="(%default)")
         opts.add_option("--offset", default="0", help="(%default)")
-        opts.add_option("--data-path", default="nyt-ingredients-snapshot-2015.csv", help="(%default)")
+        opts.add_option(
+            "--data-path", default="nyt-ingredients-snapshot-2015.csv", help="(%default)")
 
         (options, args) = opts.parse_args(argv)
         return options
