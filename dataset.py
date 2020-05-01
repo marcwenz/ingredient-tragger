@@ -3,7 +3,27 @@ import torch
 import pandas as pd
 from ingredient_phrase_tagger.training import cli
 
-# TODO Fix DataLoader batch behaviour
+
+def collate(batch_data):
+    """
+    Returns batched data in form
+    [
+        [
+            *len(batch_data) lists of sentence words*
+        ],
+        [
+            *len(batch_data) lists of sentence word features*
+        ],
+        [
+            *len(batch_data) lists of sentence word labels*
+        ]
+    ]
+    """
+    batch = [[], [], []]
+    for item in batch_data:
+        for ix, tt in enumerate(item):
+            batch[ix].append(tt)
+    return batch
 
 
 class FaceLandmarksDataset(Dataset):
@@ -34,8 +54,15 @@ class FaceLandmarksDataset(Dataset):
                     details[ix].append(part)
             ddata.append((*details, full))
         return pd.DataFrame(ddata)
+        # note that all data is returned in plain text,
+        # so encoding needs to bedone while training
 
 
 if __name__ == "__main__":
     ds = FaceLandmarksDataset()
-    print(ds[1])
+    dl = DataLoader(ds, batch_size=2, collate_fn=collate,
+                    shuffle=True, num_workers=4)
+    for d in dl:
+        [print(i) for i in d]
+        break
+    # print(ds[1])
