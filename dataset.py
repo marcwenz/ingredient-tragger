@@ -8,15 +8,9 @@ def collate(batch_data):
     """
     Returns batched data in form
     [
-        [
-            *len(batch_data) lists of sentence words*
-        ],
-        [
-            *len(batch_data) lists of sentence word features*
-        ],
-        [
-            *len(batch_data) lists of sentence word labels*
-        ]
+        [ *len(batch_data) lists of sentence words* ],
+        [ *len(batch_data) lists of sentence word features* ],
+        [ *len(batch_data) lists of sentence word labels* ]
     ]
     """
     batch = [[], [], []]
@@ -56,6 +50,7 @@ class FaceLandmarksDataset(Dataset):
         return pd.DataFrame(ddata)
         # note that all data is returned in plain text,
         # so encoding needs to bedone while training
+        
 
 
 if __name__ == "__main__":
